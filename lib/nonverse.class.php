@@ -257,11 +257,9 @@ class Nonverse {
 					if (substr($array[$j],-1,1) == 's' || substr($array[$j],-1,1) == 'x' || substr($array[$j],-1,2) == 'ch'){
 						$array[$j] = $array[$j] . 'e';
 					}elseif ($array[$j] == 'be'){
-						$array[$j] = 'i';
-						
+						$array[$j] = 'i';	
 					}elseif ($array[$j] == 'have'){
 						$array[$j] = 'ha';
-						
 					}elseif (substr($array[$j],-1,1) == 'y' && strlen($array[$j]) > 3){
 											$array[$j] = substr($array[$j],0,$lastchar) . 'ie';
 					}
@@ -279,7 +277,7 @@ class Nonverse {
 	    preg_match_all("/[&;A-Za-z]{1,16}/i", $string, $words);
 
 	    for ($i = 0; $i < count($words[0]); $i++) {
-			
+	    	
 			if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
 
 	        	if (!enchant_dict_check($spell, $words[0][$i])) {
@@ -404,56 +402,34 @@ class Nonverse {
 	}
 
 	public function process(){
-
 		$this->openTemplate();
 		$numVerbs = substr_count($this->tpldata,'[verb]');
 		$numNouns = substr_count($this->tpldata,'[noun]');
 		$numAdjs = substr_count($this->tpldata,'[adj]');
 		$numPreps = substr_count($this->tpldata,'[prep]');
 		$numGerunds = substr_count($this->tpldata,'[gerund]');
-		$articles = array('the','a');
-		$verbs = array();
-		$nouns = array();
-		$adjs = array();
-		$preps = array();
-		$gerunds = array();
-		$verbquery = "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numVerbs";
-		$gerquery = "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numGerunds";
-		$nounquery = "SELECT word FROM lexicon WHERE type = 'noun' ORDER BY random() LIMIT $numNouns";
-		$adjquery = "SELECT word FROM lexicon WHERE type = 'adj' ORDER BY random() LIMIT $numAdjs";
-		$prepquery = "SELECT word FROM lexicon WHERE type = 'prep' ORDER BY random() LIMIT $numPreps";
-		$vq = $this->db->query($verbquery) or die($verbquery . ' ' . $this->db->error);
+		$replacements = array();
+		$queries = array(
+			'verb' => "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numVerbs",
+			'gerund' => "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numGerunds",
+			'noun' => "SELECT word FROM lexicon WHERE type = 'noun' ORDER BY random() LIMIT $numNouns",
+			'adj' => "SELECT word FROM lexicon WHERE type = 'adj' ORDER BY random() LIMIT $numAdjs",
+			'prep' => "SELECT word FROM lexicon WHERE type = 'prep' ORDER BY random() LIMIT $numPreps"
+		);
 
-		foreach ($vq as $vr){
-			$verbs[] = $vr['word'];
+		while ( list($pos,$query) = each($queries)){
+			$q = $this->db->query($query) or die($query . ' ' . $this->db->error);
+			foreach ($q as $r){
+				$replacements[$pos][] = $r['word'];
+			}
 		}
+		$pos_keys = array_keys($replacements);
+		$workingtext = $this->tpldata;
 
-		$nq = $this->db->query($nounquery);
-		foreach ($nq as $nr){
-			$nouns[] = $nr['word'];
+		foreach ( $pos_keys as $key){
+			$workingtext = $this->insertWords($workingtext,$key,$replacements[$key]);
 		}
-
-		$aq = $this->db->query($adjquery);
-		foreach ($aq as $ar){
-			$adjs[] = $ar['word'];
-		}
-
-		$pq = $this->db->query($prepquery);
-		foreach ($pq as $pr){
-			$preps[] = $pr['word'];
-		}
-
-		$gq = $this->db->query($gerquery);
-		$this->debugging .= "<h3>Gerund Replacement Routines</h3>";
-		foreach ($gq as $gr){
-			$gerunds[] = $this->gerund($gr['word']);
-		}
-		$this->text = $this->insertWords($this->tpldata,'noun',$nouns);
-		$this->text = $this->insertWords($this->text,'verb',$verbs);
-		$this->text = $this->insertWords($this->text,'adj',$adjs);
-		$this->text = $this->insertWords($this->text,'prep',$preps);
-		$this->text = $this->insertWords($this->text,'gerund',$gerunds);
-		$this->text = explode('[+]',$this->text);
+		$this->text = explode('[+]',$workingtext);
 
 		if ( $this->config['use_exceptions_list'] == true ){
 			$this->text[1] = preg_replace($this->exceptions,$this->e_repl,$this->text[1]);

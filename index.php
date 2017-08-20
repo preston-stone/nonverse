@@ -7,7 +7,6 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
 	$tmpl = $_REQUEST['tmpl'];
 }
 $poem = new Nonverse($tmpl);
-$poem->process();
 $pTitle = $poem->text[0];
 $text = $poem->text[1];
 $desc = trim($poem->text[2]);
