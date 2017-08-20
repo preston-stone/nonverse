@@ -44,6 +44,7 @@ $url = trim($poem->text[3]);
 			    <li><a href="?tmpl=wcw">this is just to say</a></li>
 			    <li><a href="?tmpl=yeats">Leda and the Swan</a></li>
 			    <li><a href="?tmpl=shakespeare">The Seven Ages of Man</a></li>
+			    <li><a href="?tmpl=cummings">Summer Silence</a></li>
 			 </ul>
 			</li>
         <li><a href="#">Contact</a></li>
