@@ -1,6 +1,6 @@
 {
    "require": {
         "ext-pdo_sqlite": "*",
-        "pspell": "*"
+        "chencha/pspell": "*"
    }
 }
