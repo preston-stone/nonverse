@@ -1,7 +1,6 @@
 {
    "require": {
    		"php": "^7.1",
-        "ext-pdo_sqlite": "*",
-        "heroku-php-apache2": "*"
+        "ext-pdo_sqlite": "*"
    }
 }
