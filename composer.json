@@ -1,6 +1,6 @@
 {
    "require": {
-        "ext-pdo_sqlite": "*",
-        "chencha/pspell": "*"
+   		"php": "^7.1",
+        "ext-pdo_sqlite": "*"
    }
 }

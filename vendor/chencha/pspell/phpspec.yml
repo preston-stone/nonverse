@@ -1,4 +1,0 @@
-suites:
-    pspell_suite:
-        namespace: Chencha\Pspell
-        psr4_prefix: Chencha\Pspell

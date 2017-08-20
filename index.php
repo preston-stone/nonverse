@@ -1,6 +1,5 @@
 <?php
 include('vendor/autoload.php');
-use Chencha\Pspell;
 $debugging = '';
 
 $db = new PDO('sqlite:lexicon.default.db');
@@ -9,7 +8,7 @@ $config = array (
 	'match_word_endings' => true,
 	'permit_proper_nouns' => true,
 	'use_exceptions_list' => true,
-	'use_spellcheck' => true,
+	'use_spellcheck' => false,
 	'pspell_dictionary' => "en-us",
 	'use_gerund_replacement' => true
 );
@@ -551,6 +550,9 @@ if ( $config['use_exceptions_list'] == true ){
 if ( $config['use_spellcheck'] == true ){	
 	$debugging .= "<h3>Spell-Checking</h3>";
 	$text = nl2br(SpellCheck($text));
+} else {
+	$debugging .= "<h3>Spell-Checking Skipped</h3>";
+	$text = nl2br($text);
 }		 
 					 
 $bodyArgs['vlink'] = 'maroon';
