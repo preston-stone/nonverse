@@ -1,5 +1,6 @@
 <?php
 include('vendor/autoload.php');
+use Chencha\Pspell;
 $debugging = '';
 
 $db = new PDO('sqlite:lexicon.default.db');
