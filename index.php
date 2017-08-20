@@ -94,7 +94,6 @@ echo $text;
 <li> <a href="?tmpl=shakespeare">"The Seven Ages Of Man,"</a> William Shakespeare
 </ul>
 <li><a id="highlight" href="javascript:;">Highlight spell-corrected words</a> (hint: click on highlighted words to see the original un-spell-corrected words)</li>
-<li><a id="db" href="javascript:;">Debug</a></li>
  </div>
     <div class="col-sm-2 sidenav">
     </div>

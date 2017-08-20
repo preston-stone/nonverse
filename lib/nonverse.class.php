@@ -461,6 +461,7 @@ class Nonverse {
 
 		if ( $this->config['use_spellcheck'] == true ){	
 			$this->debugging .= "<h3>Spell-Checking</h3>";
+			$this->text[0] = $this->spellCheck($this->text[0]);
 			$this->text[1] = nl2br($this->spellCheck($this->text[1]));
 		} else {
 			$this->debugging .= "<h3>Spell-Checking Skipped</h3>";
