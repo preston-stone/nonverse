@@ -3,7 +3,7 @@
  * Nonsensical verse generator. This app parses mad libs-style templates and replaces parts of speech with relevant
  * words from a database. Currently, this app requires Enchant for advanced functionality.
  *
- * To-do: replace Enchant functionality with a composer spellcheck package (or API to a dictionary service)
+ * Todo: replace Enchant functionality with a composer spellcheck package (or API to a dictionary service)
  */
 include('vendor/autoload.php');
 $debugging = '';
