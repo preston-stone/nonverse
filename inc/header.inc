@@ -58,12 +58,11 @@ if (empty($bodyArgs['alink'])){
 
 
 ?>
- <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
-xml:lang="en" lang="en">
+ <!DOCTYPE html>
+<html>
 <head>
-<title>somniloquy.org: <?php echo $loc; ?></title>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta charset="UTF-8">
+<title><?php echo $loc; ?></title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>	
 <script language="JavaScript" type="text/javascript">
 <!--

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Nonsensical verse generator. This app parses mad libs-style templates and replaces parts of speech with relevant
+ * words from a database. Currently, this app requires Enchant for advanced functionality.
+ *
+ * Todo: replace Enchant functionality with a composer spellcheck package (or API to a dictionary service)
+ */
 include('vendor/autoload.php');
 $debugging = '';
 
@@ -8,8 +14,8 @@ $config = array (
 	'match_word_endings' => true,
 	'permit_proper_nouns' => true,
 	'use_exceptions_list' => true,
-	'use_spellcheck' => false,
-	'pspell_dictionary' => "en-us",
+	'use_spellcheck' => true,
+	'spellcheck_dictionary' => "en_US",
 	'use_gerund_replacement' => true
 );
 
@@ -19,6 +25,12 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
 	$tmpl = $_REQUEST['tmpl'];
 }
 
+/** 
+ * Converts words into properly-structured gerunds.
+ *
+ * @param string $w word
+ * @return string properly-structured gerund
+ */
 function gerund($w){
 	global $debugging;
 	
@@ -34,6 +46,12 @@ function gerund($w){
 	return $word;
 }
 
+/** 
+ * Opens mad libs template.
+ *
+ * @param string $tmpl template name
+ * @return string template file contents
+ */
 function openTemplate($tmpl){
 	$fp = fopen("tmpl/$tmpl.tmpl",'r');
 	$file = fread($fp,filesize("tmpl/$tmpl.tmpl"));
@@ -41,6 +59,14 @@ function openTemplate($tmpl){
 	return $file;
 }
 
+/** 
+ * Replaces part-of-speech tags with words.
+ *
+ * @param string $text text to process
+ * @param string $tag part of speech tag to replace
+ * @param array $array array of replacement words
+ * @return string processed text
+ */
 function insertWords($text,$tag,$array){
 	$parts = explode('[' . $tag .']',$text);
 	for ($i = 0; $i < sizeof($parts); $i++){
@@ -74,9 +100,7 @@ function insertWords($text,$tag,$array){
 					$array[$j] = 'ha';
 					
 				}elseif (substr($array[$j],-1,1) == 'y' && strlen($array[$j]) > 3){
-					//echo $array[$j] . '<br>';
-					$array[$j] = substr($array[$j],0,$lastchar) . 'ie';
-					//echo $array[$j];
+										$array[$j] = substr($array[$j],0,$lastchar) . 'ie';
 				}
 			}
 
@@ -87,18 +111,26 @@ function insertWords($text,$tag,$array){
 	return $text;
 }
 
-Function SpellCheck($string) {
-	global $debugging;
-    $pspell_link = pspell_new("en-us", "", "", "",(PSPELL_FAST|PSPELL_RUN_TOGETHER));
+/**
+ * Spellchecker to find and replace malformed words. This requires Enchant. To disable this, set 'use_spellcheck' to false.
+ *
+ * @param string $string text to spellcheck
+ * @return string spellchecked text
+ */
+function spellCheck($string) {
+	global $debugging,$config;
+	$enchant = enchant_broker_init();
+	$spell = enchant_broker_request_dict($enchant, $config['spellcheck_dictionary']);
+
     preg_match_all("/[&;A-Za-z]{1,16}/i", $string, $words);
 
     for ($i = 0; $i < count($words[0]); $i++) {
 		
 		if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
 
-        	if (!pspell_check($pspell_link, $words[0][$i])) {
+        	if (!enchant_dict_check($spell, $words[0][$i])) {
 				$debugging .= '<li><b style="font-size: 15px">' . $words[0][$i] . "</b> is misspelled or an unknown word. Options: ";
-				$suggestions = pspell_suggest($pspell_link,$words[0][$i]);
+				$suggestions = enchant_dict_suggest($spell,$words[0][$i]);
 				shuffle($suggestions);
 				$slist = implode(", ",$suggestions);
 				$debugging .= "$slist";
@@ -111,7 +143,15 @@ Function SpellCheck($string) {
     return $string;
 }
 
-function getBestSuggestion($misspelling, array $suggestions)
+/** 
+ * Returns best suggestion for a misspelled word, based on array of possible suggestions from
+  spellcheck.
+ *
+ * @param string $misspelling misspelled word
+ * @param array $suggestions spellcheck suggestions for replacement
+ * @return string best replacement word
+ */
+function getBestSuggestion($misspelling, $suggestions)
 {
 	global $debugging, $config;
 	$best_suggestion = null;
@@ -127,7 +167,6 @@ function getBestSuggestion($misspelling, array $suggestions)
 			// if there was no lower-case suggestion then use the first
 			// suggestion
 			if ($best_suggestion === null) {
-			//	$best_suggestion = $suggestions[0];
 			$best_suggestion = $misspelling;
 
 			}
@@ -136,13 +175,18 @@ function getBestSuggestion($misspelling, array $suggestions)
 			$best_suggestion = $misspelling;
 		}
 	}
-//	$debugging .= "<li>Best suggestion is $best_suggestion</li>";
 	return $best_suggestion;
 }
 
+/** 
+ * Matches word ending for spelling replacement suggestions.
+ *
+ * @param string $word word to match
+ * @return string word ending type
+ */
 function checkEnding($word,$suggestion){
 	global $debugging;
-	//$debugging .= "<li><b>Checking word ending for $word : $suggestion</b></li>";
+	
 	$ending_type = false;
 	switch( $word ){
 		case ( substr($word,-2) == "ly" ) :
@@ -168,7 +212,6 @@ function checkEnding($word,$suggestion){
 	}
 
 	if ( $ending_type != false ){
-	//	$debugging .= "<li><b>Word ending:</b> Found $ending_type for $word</li>";
 		$offset = '-' . strlen($ending_type);
 		
 		if ( substr($suggestion, -2) == "'s" && substr($word,-2) != "'s" ){
@@ -187,7 +230,14 @@ function checkEnding($word,$suggestion){
 	}	
 }
 
-function getLowerCaseSuggestion($word, array $suggestions)
+/** 
+ * Helper function for getBestSuggestion(). Uses Levenshtein distances to determine best word suggestions.
+ *
+ * @param string $word word
+ * @param array $suggestions array of replacement words
+ * @return string replacement word
+ */
+function getLowerCaseSuggestion($word, $suggestions)
 {
 	global $debugging,$config;
 	
@@ -214,86 +264,20 @@ function getLowerCaseSuggestion($word, array $suggestions)
 	return $match;
 }
 
-//echo "opening template $tmpl ...<br>";
 $file = openTemplate($tmpl);
-//echo "file is:<p>$file</p>";
-//echo "counting parts of speech ...<br>";
 $numVerbs = substr_count($file,'[verb]');
-//echo "$numVerbs verbs<br>";
 $numNouns = substr_count($file,'[noun]');
-//echo "$numNouns nouns<br>";
 $numAdjs = substr_count($file,'[adj]');
-//echo "$numAdjs adjectives<br>";
 $numPreps = substr_count($file,'[prep]');
 $numGerunds = substr_count($file,'[gerund]');
 $numVerbs = $numVerbs;
 $articles = array('the','a');
-
-$word_count = array (
-	//'num_conjunctions' => substr_count($file, '[CC]'),
-	'num_preps' => substr_count($file, '[IN]'),
-	'num_adjs' => substr_count($file, '[JJ]'),
-	//'num_adjs_comparative' => substr_count($file, '[JJR]'),
-	//'num_adjs_superlative' => substr_count($file, '[JJS]'),
-	//'num_modals' => substr_count($file, '[MD]'),
-	'num_nouns' => substr_count($file, '[NN]'),
-	'num_nouns_pl' => substr_count($file, '[NNS]'),
-	//'num_proper_nouns' => substr_count($file, '[NNP]'),
-	//'num_proper_nouns_pl' => substr_count($file, '[NNPS]'),
-	//'num_predeterminer' => substr_count($file, '[PDT]'),
-	//'num_personal_pronouns' => substr_count($file, '[PRP]'),
-	//'num_possessive_pronouns' => substr_count($file, '[PRP$]'),
-	'num_advs' => substr_count($file, '[RB]'),
-	//'num_advs_comparative' => substr_count($file, '[RBR]'),
-	//'num_advs_superlative' => substr_count($file, '[RBS]'),
-	//'num_particles' => substr_count($file, '[RP]'),
-	//'num_interjections' => substr_count($file, '[UH]'),
-	'num_verbs' => substr_count($file, '[VB]'),
-	'num_verbs_past' => substr_count($file, '[VBD]'),
-	'num_verbs_gerund' => substr_count($file, '[VBG]'),
-	'num_verbs_past_participle' => substr_count($file, '[VBN]'),
-	//'num_verbs_non_3rd_person_present' => substr_count($file, '[VBP]'),
-	//'num_verbs_3rd_person_present' => substr_count($file, '[VBZ]')
-);
 
 $verbs = array();
 $nouns = array();
 $adjs = array();
 $preps = array();
 $gerunds = array();
-
-$replacements = array (
-	'CC' => array(),
-	'IN' => array(),
-	'JJ' => array(),
-	'JJR' => array(),
-	'JJS' => array(),
-	'MD' => array(),
-	'NN' => array(),
-	'NNS' => array(),
-	'NNP' => array(),
-	'NNPS' => array(),
-	'PDT' => array(),
-	'PRP' => array(),
-	'PRP$' => array(),
-	'RB' => array(),
-	'RBR' => array(),
-	'RBS' => array(),
-	'RP' => array(),
-	'UH' => array(),
-	'VB' => array(),
-	'VBD' => array(),
-	'VBG' => array(),
-	'VBN' => array(),
-	'VBP' => array(),
-	'VBZ' => array()
-);
-
-function getWords(){
-
-
-}
-
 
 $verbquery = "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numVerbs";
 $gerquery = "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numGerunds";
@@ -549,7 +533,7 @@ if ( $config['use_exceptions_list'] == true ){
 
 if ( $config['use_spellcheck'] == true ){	
 	$debugging .= "<h3>Spell-Checking</h3>";
-	$text = nl2br(SpellCheck($text));
+	$text = nl2br(spellCheck($text));
 } else {
 	$debugging .= "<h3>Spell-Checking Skipped</h3>";
 	$text = nl2br($text);
