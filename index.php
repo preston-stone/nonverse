@@ -1,4 +1,5 @@
 <?php
+include('vendor/autoload.php');
 $debugging = '';
 
 $db = new PDO('sqlite:lexicon.default.db');
