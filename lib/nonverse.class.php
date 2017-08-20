@@ -469,7 +469,9 @@ class Nonverse {
 	}
 
 	public function setConfig($propsArray){
-
+		while (list($key,$val) = each($propsArray)){
+			$this->config[$key] = $val;
+		}
 	}
 }
 ?>

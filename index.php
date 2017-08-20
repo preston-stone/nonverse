@@ -8,10 +8,11 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
 	$tmpl = $_REQUEST['tmpl'];
 }
 $poem = new Nonverse($tmpl);
+$props = array('spellcheck_levenshtein_distance' => 8);
+$poem->setConfig($props);
 $poem->process();
 
-
-$pTitle = '<h3>' . $poem->text[0] . '</h3>';
+$pTitle = $poem->text[0];
 $text = $poem->text[1];
 $desc = trim($poem->text[2]);
 $url = trim($poem->text[3]);
@@ -20,7 +21,7 @@ $url = trim($poem->text[3]);
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Nonverse</title>
+  <title>Nonverse: <?=$pTitle?></title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
@@ -143,10 +144,14 @@ $(document).ready(function(){
 </blockquote>
 </div>
 <blockquote>
+<h3 class="poemTitle">
 <?php
 echo ucwords($pTitle);
+?></h3>
+<?php
 echo $text;
 ?>
+
 <p>
 <hr>
 <p>This is a nonsense variation of <a href="<?=$url;?>"><?=$desc;?>.</a> The nouns, verbs, adjectives and gerunds have been randomly replaced. <a href="javascript:window.location.reload()">Reload</a> to see a brand new, totally random version.</p>
