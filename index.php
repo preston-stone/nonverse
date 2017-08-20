@@ -1,5 +1,4 @@
 <?php
-
 require('lib/nonverse.class.php');
 
 if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
@@ -8,15 +7,11 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
 	$tmpl = $_REQUEST['tmpl'];
 }
 $poem = new Nonverse($tmpl);
-$props = array('spellcheck_levenshtein_distance' => 8);
-$poem->setConfig($props);
 $poem->process();
-
 $pTitle = $poem->text[0];
 $text = $poem->text[1];
 $desc = trim($poem->text[2]);
 $url = trim($poem->text[3]);
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,74 +20,10 @@ $url = trim($poem->text[3]);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="static/app.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-  <style>
-    /* Remove the navbar's default margin-bottom and rounded borders */ 
-    .navbar {
-      margin-bottom: 0;
-      border-radius: 0;
-    }
-    
-    /* Set height of the grid so .sidenav can be 100% (adjust as needed) */
-    .row.content {height: 450px;}
-    blockquote {font-size:16px;}
-    
-    /* Set gray background color and 100% height */
-    .sidenav {
-      padding-top: 20px;
-      background-color: #f1f1f1;
-      height: 100%;
-    }
-    
-    /* Set black background color, white text and some padding */
-    footer {
-      background-color: #555;
-      color: white;
-      padding: 15px;
-    }
-    
-    /* On small screens, set height to 'auto' for sidenav and grid */
-    @media screen and (max-width: 767px) {
-      .sidenav {
-        height: auto;
-        padding: 15px;
-      }
-      .row.content {height:auto;} 
-    }
-  </style>
-<script>
-$(document).ready(function(){
-	$("#highlight").click(function(){
-		$("span.spellcheck").css("color","#ff0000").css("font-weight","bold").css("cursor","pointer");
-		
-		$("span.spellcheck").each(function(){
-			$(this).attr("title",$(this).attr("data-orig"));
-			$(this).addClass('highlighted');
-		});
-	});
-	
-	$("span.spellcheck").click(function(){
-		var orig = $(this).html();
-		$(this).html($(this).attr('title'));
-		$(this).attr('title',orig);
-	});
-	
-	$("#db").click(function(){
-		$("div#debugging").toggle();
-		$("span.spellcheck").css("color","#ff0000").css("font-weight","bold").css("cursor","pointer");
-		
-		$("span.spellcheck").each(function(){
-			$(this).attr("title",$(this).attr("data-orig"));
-			$(this).addClass('highlighted');
-		});
-	});
-
-	$("#reload").click(function(){
-		window.location.reload();
-	})
-});
-</script>
+<script src="static/app.js"></script>
 </head>
 <body>
 <nav class="navbar navbar-inverse">
