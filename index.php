@@ -18,57 +18,6 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
 	$tmpl = $_REQUEST['tmpl'];
 }
 
-class Nonverse {
-	var $debugging = '';
-
-	protected function __construct(string $dbname = null, string $tmpl = 'wcw' ){
-		$db = ( $dbname === NULL ? 'lexicon.default.db' : $dbname . '.db' );
-		$this->db = new PDO('sqlite:'.$db);
-		$this->tmpl = $tmpl . '.tmpl';
-	}
-
-	protected function gerund(){
-
-	}
-
-	protected function openTemplate(){
-
-	}
-
-	protected function insertWords(){
-
-	}
-
-	protected function spellCheck(){
-
-	}
-
-	protected function getBestSuggestion(){
-
-	}
-
-	protected function checkEnding(){
-
-	}
-
-	protected function getLowerCaseSuggestion(){
-
-	}
-}
-
-class TwitterKu extends Nonverse{
-
-	protected function __construct(){
-
-
-	}
-
-	public function buildTweet(){
-
-
-	}
-}
-
 function gerund($w){
 	global $debugging;
 	
