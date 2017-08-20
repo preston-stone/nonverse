@@ -1,549 +1,65 @@
 <?php
-/**
- * Nonsensical verse generator. This app parses mad libs-style templates and replaces parts of speech with relevant
- * words from a database. Currently, this app requires Enchant for advanced functionality.
- *
- * To-do: replace Enchant functionality with a composer spellcheck package (or API to a dictionary service)
- */
-include('vendor/autoload.php');
-$debugging = '';
 
-$db = new PDO('sqlite:lexicon.default.db');
-
-$config = array (
-	'match_word_endings' => true,
-	'permit_proper_nouns' => true,
-	'use_exceptions_list' => true,
-	'use_spellcheck' => true,
-	'spellcheck_dictionary' => "en_US",
-	'use_gerund_replacement' => true
-);
+require('lib/nonverse.class.php');
 
 if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
     $tmpl = 'wcw';
 } else {
 	$tmpl = $_REQUEST['tmpl'];
 }
+$poem = new Nonverse($tmpl);
+$poem->process();
 
-/** 
- * Converts words into properly-structured gerunds.
- *
- * @param string $w word
- * @return string properly-structured gerund
- */
-function gerund($w){
-	global $debugging;
-	
-	$word = stripslashes($w);
-	$lastchar = strlen($word) - 1;
-	if ($word{$lastchar} == 'e' && substr($word,-1,2) != 'ee' && $word != 'be'){
-		$word = substr($word,0,$lastchar);
-	} elseif ($word{$lastchar} == 't' && preg_match("/[aeiou]/i",$word{$lastchar-1})) {
-		$word .= 't';
-	}
-	$word .= 'ing';
-	$debugging .= "<li>Gerund: replacing $w with $word</li>";
-	return $word;
-}
 
-/** 
- * Opens mad libs template.
- *
- * @param string $tmpl template name
- * @return string template file contents
- */
-function openTemplate($tmpl){
-	$fp = fopen("tmpl/$tmpl.tmpl",'r');
-	$file = fread($fp,filesize("tmpl/$tmpl.tmpl"));
-	fclose($fp);
-	return $file;
-}
+$pTitle = '<h3>' . $poem->text[0] . '</h3>';
+$text = $poem->text[1];
+$desc = trim($poem->text[2]);
+$url = trim($poem->text[3]);
 
-/** 
- * Replaces part-of-speech tags with words.
- *
- * @param string $text text to process
- * @param string $tag part of speech tag to replace
- * @param array $array array of replacement words
- * @return string processed text
- */
-function insertWords($text,$tag,$array){
-	$parts = explode('[' . $tag .']',$text);
-	for ($i = 0; $i < sizeof($parts); $i++){
-		$j = $i - 1;
-		if ($j >= 0){
-			$lastchar = strlen($array[$j]) - 1;
-			if ($tag == 'verb' && substr($parts[$i],0,2) == 'ed'){
-				if (substr($array[$j],-1,1) == 'e'){
-					$array[$j] = substr($array[$j],0,$lastchar);
-				}elseif (preg_match("/eak$/i",$array[$j])){
-					$array[$j] = preg_replace("/eak$/",'o',$array[$j]) . 'ke';
-					$parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-				}elseif ($array[$j] == 'go' || $array[$j] == 'do'){
-					$array[$j] .= 'ne';
-					$parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-				}elseif ($array[$j] == 'be'){
-					$array[$j] = 'was';
-					$parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-				}elseif ($array[$j] == 'have'){
-					$array[$j] = 'had';
-					$parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-				}
-			}
-			if (($tag == 'verb' || $tag =='noun') && substr($parts[$i],0,1) == 's'){
-				if (substr($array[$j],-1,1) == 's' || substr($array[$j],-1,1) == 'x' || substr($array[$j],-1,2) == 'ch'){
-					$array[$j] = $array[$j] . 'e';
-				}elseif ($array[$j] == 'be'){
-					$array[$j] = 'i';
-					
-				}elseif ($array[$j] == 'have'){
-					$array[$j] = 'ha';
-					
-				}elseif (substr($array[$j],-1,1) == 'y' && strlen($array[$j]) > 3){
-										$array[$j] = substr($array[$j],0,$lastchar) . 'ie';
-				}
-			}
-
-			$parts[$i] = $array[$j] . $parts[$i];
-		}
-	}	
-	$text = implode('',$parts);
-	return $text;
-}
-
-/**
- * Spellchecker to find and replace malformed words. This requires Enchant. To disable this, set 'use_spellcheck' to false.
- *
- * @param string $string text to spellcheck
- * @return string spellchecked text
- */
-function spellCheck($string) {
-	global $debugging,$config;
-	$enchant = enchant_broker_init();
-	$spell = enchant_broker_request_dict($enchant, $config['spellcheck_dictionary']);
-
-    preg_match_all("/[&;A-Za-z]{1,16}/i", $string, $words);
-
-    for ($i = 0; $i < count($words[0]); $i++) {
-		
-		if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
-
-        	if (!enchant_dict_check($spell, $words[0][$i])) {
-				$debugging .= '<li><b style="font-size: 15px">' . $words[0][$i] . "</b> is misspelled or an unknown word. Options: ";
-				$suggestions = enchant_dict_suggest($spell,$words[0][$i]);
-				shuffle($suggestions);
-				$slist = implode(", ",$suggestions);
-				$debugging .= "$slist";
-				$debugging .= '<br />';
-				$repl = getBestSuggestion($words[0][$i],$suggestions);		
-	            $string = preg_replace("/\b" . $words[0][$i] . "\b/i", '<span class="spellcheck" data-orig="' . $words[0][$i] . '">' . $repl . '</span>', $string);    
-	        } 
-		}
-    }
-    return $string;
-}
-
-/** 
- * Returns best suggestion for a misspelled word, based on array of possible suggestions from
-  spellcheck.
- *
- * @param string $misspelling misspelled word
- * @param array $suggestions spellcheck suggestions for replacement
- * @return string best replacement word
- */
-function getBestSuggestion($misspelling, $suggestions)
-{
-	global $debugging, $config;
-	$best_suggestion = null;
-
-	if (count($suggestions) > 0) {
-
-		// check to see if the user entered a lower-case word
-		if (ctype_lower($misspelling[0])) {
-			
-			// if a lower-case word was entered, exclude proper nouns from
-			// suggestions
-			$best_suggestion = getLowerCaseSuggestion($misspelling,$suggestions);
-			// if there was no lower-case suggestion then use the first
-			// suggestion
-			if ($best_suggestion === null) {
-			$best_suggestion = $misspelling;
-
-			}
-		} else {
-			// otherwise, include proper nouns
-			$best_suggestion = $misspelling;
-		}
-	}
-	return $best_suggestion;
-}
-
-/** 
- * Matches word ending for spelling replacement suggestions.
- *
- * @param string $word word to match
- * @return string word ending type
- */
-function checkEnding($word,$suggestion){
-	global $debugging;
-	
-	$ending_type = false;
-	switch( $word ){
-		case ( substr($word,-2) == "ly" ) :
-			$ending_type = "ly";
-			break;
-		case ( substr($word,-2) == "'s" ) :
-			$ending_type = "'s";
-			break;
-		case ( substr($word,-3) == "ish" ) :
-			$ending_type = "ish";
-			break;
-		case ( substr($word,-4) == "ness" ) :
-			$ending_type = "ness";
-			break;
-		case ( substr($word,-3) == "ing" ) :
-			$ending_type = "ing";
-			break;
-		case ( substr($word,-3) == "ful" ) :
-			$ending_type = "ful";
-			break;
-		default:
-			$ending_type = false;
-	}
-
-	if ( $ending_type != false ){
-		$offset = '-' . strlen($ending_type);
-		
-		if ( substr($suggestion, -2) == "'s" && substr($word,-2) != "'s" ){
-			return false;
-		}
-		
-		if ( substr($suggestion,intval($offset)) == $ending_type  ){
-			$debugging .= "<li>'$ending_type' ending match for $suggestion</li>";
-			return true;
-		}
-		else { 
-			return false;
-		}
-	} else {
-		return true;
-	}	
-}
-
-/** 
- * Helper function for getBestSuggestion(). Uses Levenshtein distances to determine best word suggestions.
- *
- * @param string $word word
- * @param array $suggestions array of replacement words
- * @return string replacement word
- */
-function getLowerCaseSuggestion($word, $suggestions)
-{
-	global $debugging,$config;
-	
-	$match = null;
-	$shortest = 5;
-	$debugging .= "<ul>";
-	$debugging .= "<li><b>Note:</b> Levenshtein threshold is $shortest.</li>";
-	foreach ($suggestions as $suggestion) {		
-		$word_ending = ($config['match_word_endings'] == true) ? checkEnding($word,$suggestion) : true;
-		
-		if (ctype_lower($suggestion[0]) == true && !preg_match("/[\s]/i",$suggestion) && !preg_match("/[-,\.:\&;]/i",$suggestion) && preg_match("/[aeiou]/i",$suggestion ) && $word_ending == true ) {
-			$lev = levenshtein($word, $suggestion);
-			$debugging .= "<li>$suggestion Levenshtein distance: $lev</li>";
-			
-			if ($lev < $shortest  ) {
-		        $match = $suggestion;
-		        $shortest = $lev;	
-		    }
-		}			
-	}
-
-	$debugging .= "</ul>";
-	$debugging .= "<li><b style='font-size:15px'>Replacing $word with $match : Levenshtein distance $shortest</b><br />&nbsp;<br /></li>";
-	return $match;
-}
-
-$file = openTemplate($tmpl);
-$numVerbs = substr_count($file,'[verb]');
-$numNouns = substr_count($file,'[noun]');
-$numAdjs = substr_count($file,'[adj]');
-$numPreps = substr_count($file,'[prep]');
-$numGerunds = substr_count($file,'[gerund]');
-$numVerbs = $numVerbs;
-$articles = array('the','a');
-
-$verbs = array();
-$nouns = array();
-$adjs = array();
-$preps = array();
-$gerunds = array();
-
-$verbquery = "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numVerbs";
-$gerquery = "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numGerunds";
-$nounquery = "SELECT word FROM lexicon WHERE type = 'noun' ORDER BY random() LIMIT $numNouns";
-$adjquery = "SELECT word FROM lexicon WHERE type = 'adj' ORDER BY random() LIMIT $numAdjs";
-$prepquery = "SELECT word FROM lexicon WHERE type = 'prep' ORDER BY random() LIMIT $numPreps";
-
-$vq = $db->query($verbquery) or die($verbquery . ' ' . $db->error);
-
-foreach ($vq as $vr){
-	$verbs[] = $vr['word'];
-}
-
-$nq = $db->query($nounquery);
-foreach ($nq as $nr){
-	$nouns[] = $nr['word'];
-}
-
-$aq = $db->query($adjquery);
-foreach ($aq as $ar){
-	$adjs[] = $ar['word'];
-}
-
-$pq = $db->query($prepquery);
-foreach ($pq as $pr){
-	$preps[] = $pr['word'];
-}
-
-$gq = $db->query($gerquery);
-$debugging .= "<h3>Gerund Replacement Routines</h3>";
-foreach ($gq as $gr){
-	$gerunds[] = gerund($gr['word']);
-}
-
-if ( isset($tquery) ){
-	
-	$tq = $db->query($tquery) or die($db->error);
-	
-	while ( $tr = $db->fetch_assoc() ){
-		$debugging .= '<li> Using text "' . stripslashes($tr['text_title']) . '" by ' . stripslashes($tr['text_author']) . '</li>';
-	}
-}
-
-$text = insertWords($file,'noun',$nouns);
-$text = insertWords($text,'verb',$verbs);
-$text = insertWords($text,'adj',$adjs);
-$text = insertWords($text,'prep',$preps);
-$text = insertWords($text,'gerund',$gerunds);
-$poem = explode('[+]',$text);
-$pTitle = '<h3>' . $poem[0] . '</h3>';
-$text = $poem[1];
-$desc = trim($poem[2]);
-$url = trim($poem[3]);
-$title = "This is just to say";
-
-$exceptions = array ("/seing/i",
-					 "/has gived/i",
-					 "/gived/i",
-					 "/has flyed/i",
-					 "/flyed/i",
-					 "/tryed/i",
-					 "/chs/i",
-					 "/understanded/i",
-					 "/ dyed/i",
-					 "/dyed/i",
-					 "/trys /i",
-					 "/physicses/i",
-					 "/wining /i",
-					 "/ited /i",
-					 "/stoped/i",
-					 "/stoping/i",
-					 "/bringed/i",
-					 "/sended/i",
-					 "/ a a/i",
-					 "/ a e/i",
-					 "/ a i/i",
-					 "/ a o/i",
-					 "/ a u/i",
-					 "/deads/i",
-					 "/childrens/i",
-					 "/rys /i",
-					 "/shalls/i",
-					 "/thinked/i",
-					 "/payed/i",
-					 "/have falled/i",
-					 "/falled/i",
-					 "/standed/i",
-					 "/plaies /i",
-					 "/rryed /i",
-					 "/rrys /i",
-					 "/teached/i",
-					 "/waitting/i",
-					 "/losed/i",
-					 "/finded/i",
-					 "/readed/i",
-					 "/runing/i",
-					 "/runed/i",
-					 "/cuted/i",
-					 "/lll/i",
-					 "/eatting/i",
-					 "/puted/i",
-					 "/catched/i",
-					 "/have drinked/i",
-					 "/drinked/i",
-					 "/buyed/i",
-					 "/have gave/i",
-					 "/have knowed/i",
-					 "/knowed/i",
-					 "/have seed/i",
-					 "/have flew/i",
-					 "/have forgeted/i",
-					 "/forgeted/i",
-					 "/selled/i",
-					 "/have spoke/i",
-					 "/have taked/i",
-					 "/taked/i",
-					 "/yed/i",
-					 "/maked/i",
-					 "/saied/i",
-					 "/have drived/i",
-					 "/have writed/i",
-					 "/writed/i",
-					 "/aied/i",
-					 "/aies/i",
-					 "/have eated/i",
-					 "/eated/i",
-					 "/mayed/i",
-					 "/heared/i",
-					 "/have broke/i",
-					 "/feeled/i",
-					 "/fited/i",
-					 "/have ran/i",
-					 "/have geted/i",
-					 "/geted/i",
-					 "/sleeped/i",
-					 "/I have bed/i",
-					 "/have drawed/i",
-					 "/drawed/i",
-					 "/have shalled/i",
-					 "/spended/i",
-					 "/crys/i",
-					 "/cryed/i",
-					 "/have sited/i",
-					 "/wined/i",
-					 "/telled/i",
-					 "/shs/i",
-					 "/shd/i",
-					"/&NBS;/",
-					"/sheeps/i",
-					"/chinese/i"
-					 );
-					 
-$e_repl = array ("seeing",
-				 "has given",
-				 "gave",
-				 "has flown",
-				 "flew",
-				 "tried",
-				 "ches",
-				 "understood",
-				 " dyed",
-				 "died",
-				 "tries ",
-				 "physics",
-				 "winning ",
-				 "itted ",
-				 "stopped",
-				 "stopping",
-				 "brought",
-				 "sent",
-				 " an a",
-				 " an e",
-				 " an i",
-				 " an o",
-				 " an u",
-				 "dead",
-				 "children",
-				 "ries ",
-				 "shall",
-				 "thought",
-				 "paid",
-				 "have fallen",
-				 "fell",
-				 "stood",
-				 "plays ",
-				 "rried ",
-				 "rries ",
-				 "taught",
-				 "waiting",
-				 "lost",
-				 "found",
-				 "read",
-				 "running",
-				 "ran",
-				 "cut",
-				 "ll",
-				 "eating",
-				 "put",
-				 "caught",
-				 "have drunk",
-				 "drank",
-				 "bought",
-				 "have given",
-				 "have known",
-				 "knew",
-				 "have seen",
-				 "have flown",
-				 "have forgotten",
-				 "forgot",
-				 "sold",
-				 "have spoken",
-				 "have taken",
-				 "took",
-				 "ied",
-				 "made",
-				 "said",
-				 "have driven",
-				 "have written",
-				 "wrote",
-				 "ayed",
-				 "ays",
-				 "have eaten",
-				 "eaten",
-				 "made",
-				 "heard",
-				 "have broken",
-				 "felt",
-				 "fitted",
-				 "have run",
-				 "have gotten",
-				 "got",
-				 "slept",
-				 "I have been",
-				 "have drawn",
-				 "drew",
-				 "have been",
-				 "spent",
-				 "cries",
-				 "cried",
-				 "have sighted",
-				 "won",
-				 "told",
-				 "shes",
-				 "shed",
-				"&nbsp;",
-				"sheep",
-				"Chinese"
-				 );
-
-if ( $config['use_exceptions_list'] == true ){
-	$text = preg_replace($exceptions,$e_repl,$text);
-}
-
-if ( $config['use_spellcheck'] == true ){	
-	$debugging .= "<h3>Spell-Checking</h3>";
-	$text = nl2br(spellCheck($text));
-} else {
-	$debugging .= "<h3>Spell-Checking Skipped</h3>";
-	$text = nl2br($text);
-}		 
-					 
-$bodyArgs['vlink'] = 'maroon';
-$meta_desc = "Mad libs-style nonsense verse generator based on the William Carlos Williams poem 'This is just to say.'";
-$metaTags = '<meta property="og:title" content="Nonverse Generator" /><meta property="og:description" content="' . $meta_desc . '" />';
-include_once("inc/header.inc");
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Nonverse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <style>
+    /* Remove the navbar's default margin-bottom and rounded borders */ 
+    .navbar {
+      margin-bottom: 0;
+      border-radius: 0;
+    }
+    
+    /* Set height of the grid so .sidenav can be 100% (adjust as needed) */
+    .row.content {height: 450px;}
+    blockquote {font-size:16px;}
+    
+    /* Set gray background color and 100% height */
+    .sidenav {
+      padding-top: 20px;
+      background-color: #f1f1f1;
+      height: 100%;
+    }
+    
+    /* Set black background color, white text and some padding */
+    footer {
+      background-color: #555;
+      color: white;
+      padding: 15px;
+    }
+    
+    /* On small screens, set height to 'auto' for sidenav and grid */
+    @media screen and (max-width: 767px) {
+      .sidenav {
+        height: auto;
+        padding: 15px;
+      }
+      .row.content {height:auto;} 
+    }
+  </style>
 <script>
 $(document).ready(function(){
 	$("#highlight").click(function(){
@@ -552,40 +68,78 @@ $(document).ready(function(){
 		$("span.spellcheck").each(function(){
 			$(this).attr("title",$(this).attr("data-orig"));
 			$(this).addClass('highlighted');
-			
 		});
-		
-		
 	});
 	
 	$("span.spellcheck").click(function(){
 		var orig = $(this).html();
-	//	alert(orig);
 		$(this).html($(this).attr('title'));
 		$(this).attr('title',orig);
 	});
 	
 	$("#db").click(function(){
 		$("div#debugging").toggle();
+		$("span.spellcheck").css("color","#ff0000").css("font-weight","bold").css("cursor","pointer");
 		
+		$("span.spellcheck").each(function(){
+			$(this).attr("title",$(this).attr("data-orig"));
+			$(this).addClass('highlighted');
+		});
 	});
-	
-});
 
+	$("#reload").click(function(){
+		window.location.reload();
+	})
+});
 </script>
+</head>
+<body>
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
+      <a class="navbar-brand" href="#">Nonverse</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav">
+        <li><a id="reload" href="#">Reload</a></li>
+        <li><a id="db" href="#">Debug</a></li>
+        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Templates <span class="caret"></span></a>
+        	<ul class="dropdown-menu">
+			    <li><a href="?tmpl=wcw">this is just to say</a></li>
+			    <li><a href="?tmpl=yeats">Leda and the Swan</a></li>
+			    <li><a href="?tmpl=shakespeare">The Seven Ages of Man</a></li>
+			 </ul>
+			</li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+  
+<div class="container-fluid text-center">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">
+      
+    </div>
+    <div class="col-sm-8 text-left"> 
 <div id="debugging" style="display:none">
 <blockquote style="background: #f9f6ed;border: 1px solid #d6d6d8;padding:12px;">
 	<h2>Debugging</h2>
 	<h3>Parameters</h3>
 	<ul>
 		<?php
-		while ( list($key,$val) = each($config) ){	
+		while ( list($key,$val) = each($poem->config) ){	
 			echo "<li><b>$key:</b> $val</li>";
 		}
 		?>
 		
 	</ul>
-	<?php echo $debugging; ?>
+	<?php echo $poem->debugging; ?>
 </blockquote>
 </div>
 <blockquote>
@@ -599,12 +153,21 @@ echo $text;
 <p>To see what the template for this poem looks like, <a href="tmpl/<?=$tmpl?>.tmpl">click here</a>.
 <p>Check out other auto-butchered poems:</p>
 <ul type="circle">
-<li> <a href="<?=$PHP_SELF;?>?tmpl=wcw">"This is just to say,"</a> William Carlos Williams
-<li> <a href="<?=$PHP_SELF;?>?tmpl=yeats">"Leda and the Swan,"</a> William Butler Yeats
-<li> <a href="<?=$PHP_SELF;?>?tmpl=shakespeare">"The Seven Ages Of Man,"</a> William Shakespeare
+<li> <a href="?tmpl=wcw">"This is just to say,"</a> William Carlos Williams
+<li> <a href="?tmpl=yeats">"Leda and the Swan,"</a> William Butler Yeats
+<li> <a href="?tmpl=shakespeare">"The Seven Ages Of Man,"</a> William Shakespeare
 </ul>
 <li><a id="highlight" href="javascript:;">Highlight spell-corrected words</a> (hint: click on highlighted words to see the original un-spell-corrected words)</li>
 <li><a id="db" href="javascript:;">Debug</a></li>
+ </div>
+    <div class="col-sm-2 sidenav">
+    </div>
+  </div>
+</div>
+
+<footer class="container-fluid text-center">
+  <p></p>
+</footer>
+
 </body>
 </html>
-
