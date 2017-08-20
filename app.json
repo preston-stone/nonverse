@@ -1,0 +1,6 @@
+{
+  "name": "Nonverse",
+  "description": "A nonsensical verse generator",
+  "repository": "https://git.heroku.com/nonverse.git",
+  "addons": []
+}
