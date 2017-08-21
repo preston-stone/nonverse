@@ -20,8 +20,8 @@ class Nonverse {
 		'use_gerund_replacement' => true,
 		'spellcheck_levenshtein_distance' => 5
 	);
-	public $tpldata;
-	private $exceptions = array ("/seing/i",
+	private $tpldata;
+	protected $exceptions = array ("/seing/i",
 					 "/has gived/i",
 					 "/gived/i",
 					 "/has flyed/i",
@@ -117,7 +117,7 @@ class Nonverse {
 					"/sheeps/i",
 					"/chinese/i"
 					 );
-	private $e_repl = array ("seeing",
+	protected $e_repl = array ("seeing",
 				 "has given",
 				 "gave",
 				 "has flown",
@@ -221,7 +221,6 @@ class Nonverse {
 			$this->dbname = 'lexicon.' . $dbname . '.db'; 
 		}
 		$this->db = new PDO('sqlite:'.$this->dbname);
-		$this->process();
 	}
 
 	protected function openTemplate(){
@@ -277,7 +276,7 @@ class Nonverse {
 	    preg_match_all("/[&;A-Za-z]{1,16}/i", $string, $words);
 
 	    for ($i = 0; $i < count($words[0]); $i++) {
-	    	
+
 			if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
 
 	        	if (!enchant_dict_check($spell, $words[0][$i])) {
@@ -309,8 +308,7 @@ class Nonverse {
 				// if there was no lower-case suggestion then use the first
 				// suggestion
 				if ($best_suggestion === null) {
-				$best_suggestion = $misspelling;
-
+					$best_suggestion = $misspelling;
 				}
 			} else {
 				// otherwise, include proper nouns

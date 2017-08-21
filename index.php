@@ -7,6 +7,9 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
 	$tmpl = $_REQUEST['tmpl'];
 }
 $poem = new Nonverse($tmpl);
+$config = array('use_spellcheck' => false);
+$poem->setConfig($config);
+$poem->process();
 $pTitle = $poem->text[0];
 $text = $poem->text[1];
 $desc = trim($poem->text[2]);
@@ -92,6 +95,7 @@ echo $text;
 <li> <a href="?tmpl=wcw">"This is just to say,"</a> William Carlos Williams
 <li> <a href="?tmpl=yeats">"Leda and the Swan,"</a> William Butler Yeats
 <li> <a href="?tmpl=shakespeare">"The Seven Ages Of Man,"</a> William Shakespeare
+<li> <a href="?tmpl=cummings">"Summer Silence,"</a> ee cummings
 </ul>
 <li><a id="highlight" href="javascript:;">Highlight spell-corrected words</a> (hint: click on highlighted words to see the original un-spell-corrected words)</li>
  </div>
