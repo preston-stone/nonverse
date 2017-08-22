@@ -21,6 +21,7 @@ class Nonverse {
 		'spellcheck_levenshtein_distance' => 5
 	);
 	private $tpldata;
+	private $dkey;
 	protected $exceptions = array ("/seing/i",
 					 "/has gived/i",
 					 "/gived/i",
@@ -280,12 +281,12 @@ class Nonverse {
 			if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
 
 	        	if (!enchant_dict_check($spell, $words[0][$i])) {
-					$this->debugging .= '<li><b style="font-size: 15px">' . $words[0][$i] . "</b> is misspelled or an unknown word. Options: ";
+	        		$this->dkey = sizeof($this->debugging);
+					$this->debugging[$this->dkey]['word'] = $words[0][$i];
 					$suggestions = enchant_dict_suggest($spell,$words[0][$i]);
 					shuffle($suggestions);
 					$slist = implode(", ",$suggestions);
-					$this->debugging .= "$slist";
-					$this->debugging .= '<br />';
+					$this->debugging[$this->dkey]['options'] = $slist;
 					$repl = $this->getBestSuggestion($words[0][$i],$suggestions);		
 		            $string = preg_replace("/\b" . $words[0][$i] . "\b/i", '<span class="spellcheck" data-orig="' . $words[0][$i] . '">' . $repl . '</span>', $string);    
 		        } 
@@ -321,15 +322,13 @@ class Nonverse {
 	protected function getLowerCaseSuggestion($word, $suggestions){		
 		$match = null;
 		$shortest = $this->config['spellcheck_levenshtein_distance'];
-		$this->debugging .= "<ul>";
-		$this->debugging .= "<li><b>Note:</b> Levenshtein threshold is $shortest.</li>";
 
 		foreach ($suggestions as $suggestion) {		
 			$word_ending = ($this->config['match_word_endings'] == true) ? $this->checkEnding($word,$suggestion) : true;
 			
 			if (ctype_lower($suggestion[0]) == true && !preg_match("/[\s]/i",$suggestion) && !preg_match("/[-,\.:\&;]/i",$suggestion) && preg_match("/[aeiou]/i",$suggestion ) && $word_ending == true ) {
 				$lev = levenshtein($word, $suggestion);
-				$this->debugging .= "<li>$suggestion Levenshtein distance: $lev</li>";
+				$this->debugging[$this->dkey]['suggestions'][] = array ('suggestion' => $suggestion, 'levenshtein' => $lev);
 				
 				if ($lev < $shortest  ) {
 			        $match = $suggestion;
@@ -337,8 +336,7 @@ class Nonverse {
 			    }
 			}			
 		}
-		$this->debugging .= "</ul>";
-		$this->debugging .= "<li><b style='font-size:15px'>Replacing $word with $match : Levenshtein distance $shortest</b><br />&nbsp;<br /></li>";
+		$this->debugging[$this->dkey]['match'] = $match;
 		return $match;	
 	}
 
@@ -351,7 +349,7 @@ class Nonverse {
 			$word .= 't';
 		}
 		$word .= 'ing';
-		$this->debugging .= "<li>Gerund: replacing $w with $word</li>";
+		$this->debugging[$this->dkey]['gerund'] = $word;
 		return $word;
 	}
 
@@ -388,7 +386,6 @@ class Nonverse {
 			}
 			
 			if ( substr($suggestion,intval($offset)) == $ending_type  ){
-				$this->debugging .= "<li>'$ending_type' ending match for $suggestion</li>";
 				return true;
 			}
 			else { 
@@ -434,11 +431,9 @@ class Nonverse {
 		}
 
 		if ( $this->config['use_spellcheck'] == true ){	
-			$this->debugging .= "<h3>Spell-Checking</h3>";
 			$this->text[0] = $this->spellCheck($this->text[0]);
 			$this->text[1] = nl2br($this->spellCheck($this->text[1]));
 		} else {
-			$this->debugging .= "<h3>Spell-Checking Skipped</h3>";
 			$this->text[1] = nl2br($this->text[1]);
 		}	
 	}
@@ -447,6 +442,10 @@ class Nonverse {
 		while (list($key,$val) = each($propsArray)){
 			$this->config[$key] = $val;
 		}
+	}
+
+	public function debug(){
+		print_r($this->debugging);
 	}
 }
 ?>

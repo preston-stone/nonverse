@@ -74,7 +74,22 @@ $url = trim($poem->text[3]);
 		?>
 		
 	</ul>
-	<?php echo $poem->debugging; ?>
+	<h3>Spell Check</h3>
+	<?php
+	foreach($poem->debugging as $d){
+	?>
+	<p><b><?=$d['word']?></b> is misspelled or not a word. Suggestions: <?=$d['options']?></p>
+	<ul>
+	<?php foreach ($d['suggestions'] as $s){ ?>
+	<li> <?=$s['suggestion']?>: Levenshtein distance <?=$s['levenshtein']?></li>
+	<?php
+	}
+	?>
+	<p>Replaced <b><?=$d['word']?></b> with <b><?=$d['match']?></b></p>
+	</ul>
+	<?php
+	}
+	?>
 </blockquote>
 </div>
 <blockquote>
