@@ -75,8 +75,9 @@ $url = trim($poem->text[3]);
 		
 	</ul>
 	<h3>Spell Check</h3>
+	<p>Using <?=$poem->debugging['spellchecker']?></p>
 	<?php
-	foreach($poem->debugging as $d){
+	foreach($poem->debugging['words'] as $d){
 	?>
 	<p><b><?=$d['word']?></b> is misspelled or not a word. Suggestions: <?=$d['options']?></p>
 	<ul>

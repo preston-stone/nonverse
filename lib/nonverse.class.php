@@ -3,19 +3,20 @@
  * Nonsensical verse generator. This app parses mad libs-style templates and replaces parts of speech with relevant
  * words from a database. Currently, this app requires Enchant for advanced functionality.
  *
- * To-do: replace Enchant functionality with a composer spellcheck package (or API to a dictionary service)
+ * To-do: add spellcheck method that allows choice of spellcheck engine; convert to factory pattern?
  */
 class Nonverse {
 	public $tmpl;
 	public $dbname = 'lexicon.default.db';
 	public $db;
-	public $debugging;
+	public $debugging = array( 'spellchecker' => '', 'words' => array() );
 	public $text;
 	public $config = array (
 		'match_word_endings' => true,
 		'permit_proper_nouns' => true,
 		'use_exceptions_list' => true,
 		'use_spellcheck' => true,
+		'spellcheck_engine' => 'enchant',
 		'spellcheck_dictionary' => "en_US",
 		'use_gerund_replacement' => true,
 		'spellcheck_levenshtein_distance' => 5
@@ -272,21 +273,34 @@ class Nonverse {
 	}
 
 	protected function spellCheck($string){
-		$enchant = enchant_broker_init();
-		$spell = enchant_broker_request_dict($enchant, $this->config['spellcheck_dictionary']);
+
+		if ( function_exists('enchant_broker_init') ){
+			$enchant = enchant_broker_init();
+			$spell = enchant_broker_request_dict($enchant, $this->config['spellcheck_dictionary']);
+			$spellcheck = 'enchant_dict_check';
+			$suggest = 'enchant_dict_suggest';
+			$this->debugging['spellchecker'] = 'Enchant';
+		} elseif ( function_exists('pspell_new') ){
+			$spell = pspell_new($this->config['spellcheck_dictionary'], "", "", "",(PSPELL_FAST|PSPELL_RUN_TOGETHER));
+			$spellcheck = 'pspell_check';
+			$suggest = 'pspell_suggest';
+			$this->debugging['spellchecker'] = 'PSpell';
+		} else {
+			//TODO: PHP spellcheck class
+		}
 	    preg_match_all("/[&;A-Za-z]{1,16}/i", $string, $words);
 
 	    for ($i = 0; $i < count($words[0]); $i++) {
 
 			if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
 
-	        	if (!enchant_dict_check($spell, $words[0][$i])) {
-	        		$this->dkey = sizeof($this->debugging);
-					$this->debugging[$this->dkey]['word'] = $words[0][$i];
-					$suggestions = enchant_dict_suggest($spell,$words[0][$i]);
+	        	if (!$spellcheck($spell, $words[0][$i])) {
+	        		$this->dkey = sizeof($this->debugging['words']);
+					$this->debugging['words'][$this->dkey]['word'] = $words[0][$i];
+					$suggestions = $suggest($spell,$words[0][$i]);
 					shuffle($suggestions);
 					$slist = implode(", ",$suggestions);
-					$this->debugging[$this->dkey]['options'] = $slist;
+					$this->debugging['words'][$this->dkey]['options'] = $slist;
 					$repl = $this->getBestSuggestion($words[0][$i],$suggestions);		
 		            $string = preg_replace("/\b" . $words[0][$i] . "\b/i", '<span class="spellcheck" data-orig="' . $words[0][$i] . '">' . $repl . '</span>', $string);    
 		        } 
@@ -328,7 +342,7 @@ class Nonverse {
 			
 			if (ctype_lower($suggestion[0]) == true && !preg_match("/[\s]/i",$suggestion) && !preg_match("/[-,\.:\&;]/i",$suggestion) && preg_match("/[aeiou]/i",$suggestion ) && $word_ending == true ) {
 				$lev = levenshtein($word, $suggestion);
-				$this->debugging[$this->dkey]['suggestions'][] = array ('suggestion' => $suggestion, 'levenshtein' => $lev);
+				$this->debugging['words'][$this->dkey]['suggestions'][] = array ('suggestion' => $suggestion, 'levenshtein' => $lev);
 				
 				if ($lev < $shortest  ) {
 			        $match = $suggestion;
@@ -336,7 +350,7 @@ class Nonverse {
 			    }
 			}			
 		}
-		$this->debugging[$this->dkey]['match'] = $match;
+		$this->debugging['words'][$this->dkey]['match'] = $match;
 		return $match;	
 	}
 
@@ -349,7 +363,7 @@ class Nonverse {
 			$word .= 't';
 		}
 		$word .= 'ing';
-		$this->debugging[$this->dkey]['gerund'] = $word;
+		$this->debugging['words'][$this->dkey]['gerund'] = $word;
 		return $word;
 	}
 
