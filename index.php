@@ -78,8 +78,9 @@ $url = trim($poem->text[3]);
 	<p>Using <?=$poem->debugging['spellchecker']?></p>
 	<?php
 	foreach($poem->debugging['words'] as $d){
+		if ( isset($d['word'])){
 	?>
-	<p><b><?=$d['word']?></b> is misspelled or not a word. Suggestions: <?=$d['options']?></p>
+	<p><b><?=@$d['word']?></b> is misspelled or not a word. Suggestions: <?=$d['options']?></p>
 	<ul>
 	<?php foreach ($d['suggestions'] as $s){ ?>
 	<li> <?=$s['suggestion']?>: Levenshtein distance <?=$s['levenshtein']?></li>
@@ -89,6 +90,7 @@ $url = trim($poem->text[3]);
 	<p>Replaced <b><?=$d['word']?></b> with <b><?=$d['match']?></b></p>
 	</ul>
 	<?php
+}
 	}
 	?>
 </blockquote>
