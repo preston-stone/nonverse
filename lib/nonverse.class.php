@@ -16,7 +16,7 @@ class Nonverse {
 		'permit_proper_nouns' => true,
 		'use_exceptions_list' => true,
 		'use_spellcheck' => true,
-		'spellcheck_engine' => 'enchant',
+		//'spellcheck_engine' => 'PSpell',
 		'spellcheck_dictionary' => "en_US",
 		'use_gerund_replacement' => true,
 		'spellcheck_levenshtein_distance' => 5
@@ -274,13 +274,13 @@ class Nonverse {
 
 	protected function spellCheck($string){
 
-		if ( function_exists('enchant_broker_init') ){
+		if ( function_exists('enchant_broker_init') && (@$this->config['spellcheck_engine'] == 'enchant' || empty($this->config['spellcheck_engine'])) ){
 			$enchant = enchant_broker_init();
 			$spell = enchant_broker_request_dict($enchant, $this->config['spellcheck_dictionary']);
 			$spellcheck = 'enchant_dict_check';
 			$suggest = 'enchant_dict_suggest';
 			$this->debugging['spellchecker'] = 'Enchant';
-		} elseif ( function_exists('pspell_new') ){
+		} elseif ( function_exists('pspell_new') && (@$this->config['spellcheck_engine'] == 'pspell'|| empty($this->config['spellcheck_engine'])) ){
 			$spell = pspell_new($this->config['spellcheck_dictionary'], "", "", "",(PSPELL_FAST|PSPELL_RUN_TOGETHER));
 			$spellcheck = 'pspell_check';
 			$suggest = 'pspell_suggest';
@@ -291,9 +291,7 @@ class Nonverse {
 	    preg_match_all("/[&;A-Za-z]{1,16}/i", $string, $words);
 
 	    for ($i = 0; $i < count($words[0]); $i++) {
-
 			if ( !preg_match("/&([a-zA-Z0-9]+);/",$words[0][$i]) ){
-
 	        	if (!$spellcheck($spell, $words[0][$i])) {
 	        		$this->dkey = sizeof($this->debugging['words']);
 					$this->debugging['words'][$this->dkey]['word'] = $words[0][$i];
@@ -429,7 +427,11 @@ class Nonverse {
 		while ( list($pos,$query) = each($queries)){
 			$q = $this->db->query($query) or die($query . ' ' . $this->db->error);
 			foreach ($q as $r){
-				$replacements[$pos][] = $r['word'];
+				if ( $pos == 'gerund' ){
+					$replacements[$pos][] = $this->gerund($r['word']);
+				} else {
+					$replacements[$pos][] = $r['word'];
+				}
 			}
 		}
 		$pos_keys = array_keys($replacements);
@@ -444,7 +446,7 @@ class Nonverse {
 			$this->text[1] = preg_replace($this->exceptions,$this->e_repl,$this->text[1]);
 		}
 
-		if ( $this->config['use_spellcheck'] == true ){	
+		if ( @$this->config['use_spellcheck'] == true ){	
 			$this->text[0] = $this->spellCheck($this->text[0]);
 			$this->text[1] = nl2br($this->spellCheck($this->text[1]));
 		} else {
