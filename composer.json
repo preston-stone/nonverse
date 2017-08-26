@@ -1,7 +1,6 @@
 {
    "require": {
-   		"php": "^7.1",
-        "ext-pdo_sqlite": "*",
-	"enchant": "*"
+   	"php": "^7.1",
+        "ext-pdo_sqlite": "*"
    }
 }

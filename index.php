@@ -4,11 +4,11 @@ require('lib/nonverse.class.php');
 if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
     $tmpl = 'wcw';
 } else {
-	$tmpl = $_REQUEST['tmpl'];
+    $tmpl = $_REQUEST['tmpl'];
 }
 $poem = new Nonverse($tmpl);
-$config = array('use_spellcheck' => false);
-$poem->setConfig($config);
+//$config = array('use_spellcheck' => false);
+//$poem->setConfig($config);
 $poem->process();
 $pTitle = $poem->text[0];
 $text = $poem->text[1];
@@ -43,13 +43,13 @@ $url = trim($poem->text[3]);
         <li><a id="reload" href="#">Reload</a></li>
         <li><a id="db" href="#">Debug</a></li>
         <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Templates <span class="caret"></span></a>
-        	<ul class="dropdown-menu">
-			    <li><a href="?tmpl=wcw">this is just to say</a></li>
-			    <li><a href="?tmpl=yeats">Leda and the Swan</a></li>
-			    <li><a href="?tmpl=shakespeare">The Seven Ages of Man</a></li>
-			    <li><a href="?tmpl=cummings">Summer Silence</a></li>
-			 </ul>
-			</li>
+            <ul class="dropdown-menu">
+                <li><a href="?tmpl=wcw">this is just to say</a></li>
+                <li><a href="?tmpl=yeats">Leda and the Swan</a></li>
+                <li><a href="?tmpl=shakespeare">The Seven Ages of Man</a></li>
+                <li><a href="?tmpl=cummings">Summer Silence</a></li>
+             </ul>
+            </li>
         <li><a href="#">Contact</a></li>
       </ul>
     </div>
@@ -64,35 +64,41 @@ $url = trim($poem->text[3]);
     <div class="col-sm-8 text-left"> 
 <div id="debugging" style="display:none">
 <blockquote style="background: #f9f6ed;border: 1px solid #d6d6d8;padding:12px;">
-	<h2>Debugging</h2>
-	<h3>Parameters</h3>
-	<ul>
-		<?php
-		while ( list($key,$val) = each($poem->config) ){	
-			echo "<li><b>$key:</b> $val</li>";
-		}
-		?>
-		
-	</ul>
-	<h3>Spell Check</h3>
-	<p>Using <?=$poem->debugging['spellchecker']?></p>
-	<?php
-	foreach($poem->debugging['words'] as $d){
-		if ( isset($d['word'])){
-	?>
-	<p><b><?=@$d['word']?></b> is misspelled or not a word. Suggestions: <?=$d['options']?></p>
-	<ul>
-	<?php foreach ($d['suggestions'] as $s){ ?>
-	<li> <?=$s['suggestion']?>: Levenshtein distance <?=$s['levenshtein']?></li>
-	<?php
-	}
-	?>
-	<p>Replaced <b><?=$d['word']?></b> with <b><?=$d['match']?></b></p>
-	</ul>
-	<?php
+    <h2>Debugging</h2>
+    <h3>Parameters</h3>
+    <ul>
+        <?php
+        while ( list($key,$val) = each($poem->config) ){    
+            echo "<li><b>$key:</b> $val</li>";
+        }
+        ?>
+        
+    </ul>
+    <h3>Spell Check</h3>
+    <?php if ( !empty($poem->debugging['spellchecker']) ){ ?>
+    <p>Using <?=$poem->debugging['spellchecker']?></p>
+    <?php
+    } else {
+        ?>
+        <p>Spell checking skipped.</p>
+    <?php
+    }
+    foreach($poem->debugging['words'] as $d){
+        if ( isset($d['word'])){
+    ?>
+    <p><b><?=@$d['word']?></b> is misspelled or not a word. Suggestions: <?=$d['options']?></p>
+    <ul>
+    <?php foreach ($d['suggestions'] as $s){ ?>
+    <li> <?=$s['suggestion']?>: Levenshtein distance <?=$s['levenshtein']?></li>
+    <?php
+    }
+    ?>
+    <p>Replaced <b><?=$d['word']?></b> with <b><?=$d['match']?></b></p>
+    </ul>
+    <?php
 }
-	}
-	?>
+    }
+    ?>
 </blockquote>
 </div>
 <blockquote>
