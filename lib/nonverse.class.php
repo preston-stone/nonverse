@@ -335,18 +335,20 @@ class Nonverse {
         $match = null;
         $shortest = $this->config['spellcheck_levenshtein_distance'];
 
-        foreach ($suggestions as $suggestion) {        
-            $word_ending = ($this->config['match_word_endings'] == true) ? $this->checkEnding($word,$suggestion) : true;
-            
-            if (ctype_lower($suggestion[0]) == true && !preg_match("/[\s]/i",$suggestion) && !preg_match("/[-,\.:\&;]/i",$suggestion) && preg_match("/[aeiou]/i",$suggestion ) && $word_ending == true ) {
-                $lev = levenshtein($word, $suggestion);
-                $this->debugging['words'][$this->dkey]['suggestions'][] = array ('suggestion' => $suggestion, 'levenshtein' => $lev);
+        foreach ($suggestions as $suggestion) {
+            if ( !preg_match("/\'/",$suggestion) ){        
+                $word_ending = ($this->config['match_word_endings'] == true) ? $this->checkEnding($word,$suggestion) : true;
                 
-                if ($lev < $shortest  ) {
-                    $match = $suggestion;
-                    $shortest = $lev;    
-                }
-            }            
+                if (ctype_lower($suggestion[0]) == true && !preg_match("/[\s]/i",$suggestion) && !preg_match("/[-,\.:\&;]/i",$suggestion) && preg_match("/[aeiou]/i",$suggestion ) && $word_ending == true ) {
+                    $lev = levenshtein($word, $suggestion);
+                    $this->debugging['words'][$this->dkey]['suggestions'][] = array ('suggestion' => $suggestion, 'levenshtein' => $lev);
+                    
+                    if ($lev < $shortest  ) {
+                        $match = $suggestion;
+                        $shortest = $lev;    
+                    }
+                } 
+            }           
         }
         $this->debugging['words'][$this->dkey]['match'] = $match;
         return $match;    
