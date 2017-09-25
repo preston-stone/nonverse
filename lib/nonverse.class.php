@@ -1,4 +1,5 @@
 <?php
+error_reporting(E_ERROR);
 /**
  * Nonsensical verse generator. This app parses mad libs-style templates and replaces parts of speech with relevant
  * words from a database. Currently, this app requires Enchant for advanced functionality.
@@ -11,6 +12,7 @@ class Nonverse {
     public $db;
     public $debugging = array( 'spellchecker' => '', 'words' => array() );
     public $text;
+    public $props;
     public $config = array (
         'match_word_endings' => true,
         'permit_proper_nouns' => true,
@@ -24,254 +26,237 @@ class Nonverse {
     private $tpldata;
     private $dkey;
     protected $exceptions = array ("/seing/i",
-                     "/has gived/i",
-                     "/gived/i",
-                     "/has flyed/i",
-                     "/flyed/i",
-                     "/tryed/i",
-                     "/chs/i",
-                     "/understanded/i",
-                     "/ dyed/i",
-                     "/dyed/i",
-                     "/trys /i",
-                     "/physicses/i",
-                     "/wining /i",
-                     "/ited /i",
-                     "/stoped/i",
-                     "/stoping/i",
-                     "/bringed/i",
-                     "/sended/i",
-                     "/ a a/i",
-                     "/ a e/i",
-                     "/ a i/i",
-                     "/ a o/i",
-                     "/ a u/i",
-                     "/deads/i",
-                     "/childrens/i",
-                     "/rys /i",
-                     "/shalls/i",
-                     "/thinked/i",
-                     "/payed/i",
-                     "/have falled/i",
-                     "/falled/i",
-                     "/standed/i",
-                     "/plaies /i",
-                     "/rryed /i",
-                     "/rrys /i",
-                     "/teached/i",
-                     "/waitting/i",
-                     "/losed/i",
-                     "/finded/i",
-                     "/readed/i",
-                     "/runing/i",
-                     "/runed/i",
-                     "/cuted/i",
-                     "/lll/i",
-                     "/eatting/i",
-                     "/puted/i",
-                     "/catched/i",
-                     "/have drinked/i",
-                     "/drinked/i",
-                     "/buyed/i",
-                     "/have gave/i",
-                     "/have knowed/i",
-                     "/knowed/i",
-                     "/have seed/i",
-                     "/have flew/i",
-                     "/have forgeted/i",
-                     "/forgeted/i",
-                     "/selled/i",
-                     "/have spoke/i",
-                     "/have taked/i",
-                     "/taked/i",
-                     "/yed/i",
-                     "/maked/i",
-                     "/saied/i",
-                     "/have drived/i",
-                     "/have writed/i",
-                     "/writed/i",
-                     "/aied/i",
-                     "/aies/i",
-                     "/have eated/i",
-                     "/eated/i",
-                     "/mayed/i",
-                     "/heared/i",
-                     "/have broke/i",
-                     "/feeled/i",
-                     "/fited/i",
-                     "/have ran/i",
-                     "/have geted/i",
-                     "/geted/i",
-                     "/sleeped/i",
-                     "/I have bed/i",
-                     "/have drawed/i",
-                     "/drawed/i",
-                     "/have shalled/i",
-                     "/spended/i",
-                     "/crys/i",
-                     "/cryed/i",
-                     "/have sited/i",
-                     "/wined/i",
-                     "/telled/i",
-                     "/shs/i",
-                     "/shd/i",
-                    "/&NBS;/",
-                    "/sheeps/i",
-                    "/chinese/i"
-                     );
+        "/has gived/i",
+        "/gived/i",
+        "/has flyed/i",
+        "/flyed/i",
+        "/tryed/i",
+        "/chs/i",
+        "/understanded/i",
+        "/ dyed/i",
+        "/dyed/i",
+        "/trys /i",
+        "/physicses/i",
+        "/wining /i",
+        "/ited /i",
+        "/stoped/i",
+        "/stoping/i",
+        "/bringed/i",
+        "/sended/i",
+        "/ a a/i",
+        "/ a e/i",
+        "/ a i/i",
+        "/ a o/i",
+        "/ a u/i",
+        "/deads/i",
+        "/childrens/i",
+        "/rys /i",
+        "/shalls/i",
+        "/thinked/i",
+        "/payed/i",
+        "/have falled/i",
+        "/falled/i",
+        "/standed/i",
+        "/plaies /i",
+        "/rryed /i",
+        "/rrys /i",
+        "/teached/i",
+        "/waitting/i",
+        "/losed/i",
+        "/finded/i",
+        "/readed/i",
+        "/runing/i",
+        "/runed/i",
+        "/cuted/i",
+        "/lll/i",
+        "/eatting/i",
+        "/puted/i",
+        "/catched/i",
+        "/have drinked/i",
+        "/drinked/i",
+        "/buyed/i",
+        "/have gave/i",
+        "/have knowed/i",
+        "/knowed/i",
+        "/have seed/i",
+        "/have flew/i",
+        "/have forgeted/i",
+        "/forgeted/i",
+        "/selled/i",
+        "/have spoke/i",
+        "/have taked/i",
+        "/taked/i",
+        "/yed/i",
+        "/maked/i",
+        "/saied/i",
+        "/have drived/i",
+        "/have writed/i",
+        "/writed/i",
+        "/aied/i",
+        "/aies/i",
+        "/have eated/i",
+        "/eated/i",
+        "/mayed/i",
+        "/heared/i",
+        "/have broke/i",
+        "/feeled/i",
+        "/fited/i",
+        "/have ran/i",
+        "/have geted/i",
+        "/geted/i",
+        "/sleeped/i",
+        "/I have bed/i",
+        "/have drawed/i",
+        "/drawed/i",
+        "/have shalled/i",
+        "/spended/i",
+        "/crys/i",
+        "/cryed/i",
+        "/have sited/i",
+        "/wined/i",
+        "/telled/i",
+        "/shs/i",
+        "/shd/i",
+        "/&NBS;/",
+        "/sheeps/i",
+        "/chinese/i",
+        "/([^aeiou])ys([^a-zA-Z])/i",
+        "/sss/i",
+        "/childs/i"
+    );
     protected $e_repl = array ("seeing",
-                 "has given",
-                 "gave",
-                 "has flown",
-                 "flew",
-                 "tried",
-                 "ches",
-                 "understood",
-                 " dyed",
-                 "died",
-                 "tries ",
-                 "physics",
-                 "winning ",
-                 "itted ",
-                 "stopped",
-                 "stopping",
-                 "brought",
-                 "sent",
-                 " an a",
-                 " an e",
-                 " an i",
-                 " an o",
-                 " an u",
-                 "dead",
-                 "children",
-                 "ries ",
-                 "shall",
-                 "thought",
-                 "paid",
-                 "have fallen",
-                 "fell",
-                 "stood",
-                 "plays ",
-                 "rried ",
-                 "rries ",
-                 "taught",
-                 "waiting",
-                 "lost",
-                 "found",
-                 "read",
-                 "running",
-                 "ran",
-                 "cut",
-                 "ll",
-                 "eating",
-                 "put",
-                 "caught",
-                 "have drunk",
-                 "drank",
-                 "bought",
-                 "have given",
-                 "have known",
-                 "knew",
-                 "have seen",
-                 "have flown",
-                 "have forgotten",
-                 "forgot",
-                 "sold",
-                 "have spoken",
-                 "have taken",
-                 "took",
-                 "ied",
-                 "made",
-                 "said",
-                 "have driven",
-                 "have written",
-                 "wrote",
-                 "ayed",
-                 "ays",
-                 "have eaten",
-                 "eaten",
-                 "made",
-                 "heard",
-                 "have broken",
-                 "felt",
-                 "fitted",
-                 "have run",
-                 "have gotten",
-                 "got",
-                 "slept",
-                 "I have been",
-                 "have drawn",
-                 "drew",
-                 "have been",
-                 "spent",
-                 "cries",
-                 "cried",
-                 "have sighted",
-                 "won",
-                 "told",
-                 "shes",
-                 "shed",
-                "&nbsp;",
-                "sheep",
-                "Chinese"
-                 );
+        "has given",
+        "gave",
+        "has flown",
+        "flew",
+        "tried",
+        "ches",
+        "understood",
+        " dyed",
+        "died",
+        "tries ",
+        "physics",
+        "winning ",
+        "itted ",
+        "stopped",
+        "stopping",
+        "brought",
+        "sent",
+        " an a",
+        " an e",
+        " an i",
+        " an o",
+        " an u",
+        "dead",
+        "children",
+        "ries ",
+        "shall",
+        "thought",
+        "paid",
+        "have fallen",
+        "fell",
+        "stood",
+        "plays ",
+        "rried ",
+        "rries ",
+        "taught",
+        "waiting",
+        "lost",
+        "found",
+        "read",
+        "running",
+        "ran",
+        "cut",
+        "ll",
+        "eating",
+        "put",
+        "caught",
+        "have drunk",
+        "drank",
+        "bought",
+        "have given",
+        "have known",
+        "knew",
+        "have seen",
+        "have flown",
+        "have forgotten",
+        "forgot",
+        "sold",
+        "have spoken",
+        "have taken",
+        "took",
+        "ied",
+        "made",
+        "said",
+        "have driven",
+        "have written",
+        "wrote",
+        "ayed",
+        "ays",
+        "have eaten",
+        "eaten",
+        "made",
+        "heard",
+        "have broken",
+        "felt",
+        "fitted",
+        "have run",
+        "have gotten",
+        "got",
+        "slept",
+        "I have been",
+        "have drawn",
+        "drew",
+        "have been",
+        "spent",
+        "cries",
+        "cried",
+        "have sighted",
+        "won",
+        "told",
+        "shes",
+        "shed",
+        "&nbsp;",
+        "sheep",
+        "Chinese",
+        "$1ies$2",
+        "sses",
+        "children"
+    );
 
-    public function __construct($tmpl, $dbname = ''){
-        $this->tmpl = $tmpl;
+    /**
+	 * Class constructor - initializes basic variables.
+	 * @param string $tmpl template to use
+     * @param string $dbname database to use
+     * @param array $props custom properties to pass to class
+	 */
+    public function __construct($tmpl, $dbname = '',$props = ''){
+        $this->tmpl = filter_var($tmpl,FILTER_SANITIZE_STRING);
 
         if ( $dbname != ''){ 
             $this->dbname = 'lexicon.' . $dbname . '.db'; 
         }
         $this->db = new PDO('sqlite:'.$this->dbname);
+
+        if (is_array($props) ){
+            $this->setConfig($props);
+        }
     }
 
+    /**
+	 * Fetches template content
+	 */
     protected function openTemplate(){
         $fp = fopen("tmpl/".$this->tmpl.".tmpl",'r');
         $this->tpldata = fread($fp,filesize("tmpl/$this->tmpl.tmpl"));
         fclose($fp);
     }
 
-    protected function insertWords($text,$tag,$array){
-        $parts = explode('[' . $tag .']',$text);
-        for ($i = 0; $i < sizeof($parts); $i++){
-            $j = $i - 1;
-            if ($j >= 0){
-                $lastchar = strlen($array[$j]) - 1;
-                if ($tag == 'verb' && substr($parts[$i],0,2) == 'ed'){
-                    if (substr($array[$j],-1,1) == 'e'){
-                        $array[$j] = substr($array[$j],0,$lastchar);
-                    }elseif (preg_match("/eak$/i",$array[$j])){
-                        $array[$j] = preg_replace("/eak$/",'o',$array[$j]) . 'ke';
-                        $parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-                    }elseif ($array[$j] == 'go' || $array[$j] == 'do'){
-                        $array[$j] .= 'ne';
-                        $parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-                    }elseif ($array[$j] == 'be'){
-                        $array[$j] = 'was';
-                        $parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-                    }elseif ($array[$j] == 'have'){
-                        $array[$j] = 'had';
-                        $parts[$i] = substr($parts[$i],2,strlen($parts[$i]));
-                    }
-                }
-                if (($tag == 'verb' || $tag =='noun') && substr($parts[$i],0,1) == 's'){
-                    if (substr($array[$j],-1,1) == 's' || substr($array[$j],-1,1) == 'x' || substr($array[$j],-1,2) == 'ch'){
-                        $array[$j] = $array[$j] . 'e';
-                    }elseif ($array[$j] == 'be'){
-                        $array[$j] = 'i';    
-                    }elseif ($array[$j] == 'have'){
-                        $array[$j] = 'ha';
-                    }elseif (substr($array[$j],-1,1) == 'y' && strlen($array[$j]) > 3){
-                                            $array[$j] = substr($array[$j],0,$lastchar) . 'ie';
-                    }
-                }
-                $parts[$i] = $array[$j] . $parts[$i];
-            }
-        }    
-        $text = implode('',$parts);
-        return $text;
-    }
-
+    /**
+	 * Spell checks parsed template content
+     * @param string $string content to spell check
+     * @return string spell-checked word
+	 */
     protected function spellCheck($string){
 
         if ( function_exists('enchant_broker_init') && (@$this->config['spellcheck_engine'] == 'enchant' || empty($this->config['spellcheck_engine'])) ){
@@ -307,6 +292,13 @@ class Nonverse {
         return $string;    
     }
 
+    /**
+	 * Find best option from suggested spelling replacements
+	 * @param string $misspelling misspelled word
+     * @param array $suggestions word replacement suggestions
+     * @param array $props custom properties to pass to class
+     * @return string best suggestion
+	 */
     protected function getBestSuggestion($misspelling, $suggestions){
         $best_suggestion = null;
 
@@ -352,6 +344,12 @@ class Nonverse {
         return $match;    
     }
 
+    /**
+     * Converts verb to gerund form
+     * @param string $w word to convert
+     * @return string converted gerund
+     * @deprecated
+     */
     private function gerund($w){
         $word = stripslashes($w);
         $lastchar = strlen($word) - 1;
@@ -410,38 +408,51 @@ class Nonverse {
 
     public function process(){
         $this->openTemplate();
-        $numVerbs = substr_count($this->tpldata,'[verb]');
-        $numNouns = substr_count($this->tpldata,'[noun]');
-        $numAdjs = substr_count($this->tpldata,'[adj]');
-        $numPreps = substr_count($this->tpldata,'[prep]');
-        $numGerunds = substr_count($this->tpldata,'[gerund]');
-        $replacements = array();
-        $queries = array(
-            'verb' => "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numVerbs",
-            'gerund' => "SELECT word FROM lexicon WHERE type = 'verb' ORDER BY random() LIMIT $numGerunds",
-            'noun' => "SELECT word FROM lexicon WHERE type = 'noun' ORDER BY random() LIMIT $numNouns",
-            'adj' => "SELECT word FROM lexicon WHERE type = 'adj' ORDER BY random() LIMIT $numAdjs",
-            'prep' => "SELECT word FROM lexicon WHERE type = 'prep' ORDER BY random() LIMIT $numPreps"
-        );
+        $workingtext = $this->tpldata;
+        preg_match_all('/<word([^>]+)>/i',$workingtext,$tags,PREG_OFFSET_CAPTURE);
+        $temptags = $tags[0];
+
+        for( $i = 0; $i < sizeof($temptags);$i++ ){
+            $tag = trim(rtrim(preg_replace("/<word([^>]+)>/i",'$1',$temptags[$i][0]),'/'));
+            $tag = explode(" ",$tag);
+            
+
+            for ($n = 0; $n < sizeof($tag); $n++){
+                list($k,$v) = explode('=',$tag[$n]);
+                $v = preg_replace("/([\"])/i",'',$v);
+	            $tag[$k] = $v;
+                unset($tag[$n]);
+            }
+            $tag['strpos'] = $temptags[$i][1];
+            $poskey = $tag['class'];
+            $this->tags[$poskey][] = $tag;
+        }
+        $counts = $queries = array();
+        $parts = array_keys($this->tags);
+
+        foreach($parts as $part){
+            $counts[$part] = sizeof($this->tags[$part]);
+            $qpos = ( $part == 'gerund' ) ? 'verb' : $part;
+            $queries[$part] = "SELECT word FROM lexicon WHERE type = '$qpos' ORDER BY random() LIMIT 0,${counts[$part]}";
+        }
 
         while ( list($pos,$query) = each($queries)){
             $q = $this->db->query($query) or die($query . ' ' . $this->db->error);
-            foreach ($q as $r){
-                if ( $pos == 'gerund' ){
-                    $replacements[$pos][] = $this->gerund($r['word']);
-                } else {
-                    $replacements[$pos][] = $r['word'];
-                }
-            }
-        }
-        $pos_keys = array_keys($replacements);
-        $workingtext = $this->tpldata;
 
-        foreach ( $pos_keys as $key){
-            $workingtext = $this->insertWords($workingtext,$key,$replacements[$key]);
+            foreach ($q as $r){
+            	$pkey = ( isset($pkey) ? sizeof($replacements[$pos]) : 0 );
+            	$attrs = $this->tags[$pos][$pkey];
+            	$replacements[$pos][] = $this->parseAttrs($r['word'], $attrs);
+            	unset($attrs);
+            	unset($tagset);
+            }
+            $subrepl = $replacements[$pos];
+            $workingtext = preg_replace_callback( "/<word [^>]+".$pos."[^>]+>/i", function($matches) use (&$subrepl){
+				return array_shift($subrepl);          	
+            }, $workingtext);
         }
         $this->text = explode('[+]',$workingtext);
-
+        
         if ( $this->config['use_exceptions_list'] == true ){
             $this->text[1] = preg_replace($this->exceptions,$this->e_repl,$this->text[1]);
         }
@@ -451,9 +462,56 @@ class Nonverse {
             $this->text[1] = nl2br($this->spellCheck($this->text[1]));
         } else {
             $this->text[1] = nl2br($this->text[1]);
-        }    
+        }  
     }
 
+    private function parseAttrs($word, $attrs){
+        $pos = $attrs['class'];
+
+        switch ($pos){
+            case 'noun':
+                if ( isset($attrs['data-num']) ){
+                    if ( $attrs['data-num'] == 'pl' ){
+                        $pword = $word . 's';
+                    }
+                }
+                break;
+            case 'verb':
+                if ( isset ($attrs['data-tense']) ){
+                    if ( $attrs['data-tense'] == 'past'){
+                        $suf = ( preg_match("/([aeiou]$)/i",$word)) ? 'd' : 'ed';
+                        $pword = $word . $suf;
+                    } elseif ( $attrs['data-tense'] == 'present' && $attrs['data-num'] !== 'pl' ){
+                    	if ( preg_match( "/([aiou])$/i",$word ) ){
+                    		$pword = $word . 'es';
+                    	} else {
+	                        $pword = $word . 's';
+	                    }
+                    }
+                } elseif (!isset($attrs['data-tense']) && $attrs['data-num'] !== 'pl'){
+                	if ( preg_match( "/([aiou])$/i",$word ) ){
+                    		$pword = $word . 'es';
+                    	} else {
+	                        $pword = $word . 's';
+	                    }
+                }
+
+                if ( isset ( $attrs['data-num'] ) ){
+                    if ( $attrs['data-num'] !== 'pl' && ( $attrs['data-tense'] == 'present' || !isset($attrs['data-tense']) ) ){
+                        $pword = $word;
+                    }
+                }
+                break;
+            case 'gerund':
+                $pword = $word .'ing';
+                break;
+            default:
+            	$pword = $word;
+        }
+        if ( !isset($pword) ){ $pword = $word; }
+        return $pword;
+    }
+    
     public function setConfig($propsArray){
         while (list($key,$val) = each($propsArray)){
             $this->config[$key] = $val;
