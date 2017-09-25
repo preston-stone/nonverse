@@ -225,11 +225,11 @@ class Nonverse {
     );
 
     /**
-	 * Class constructor - initializes basic variables.
-	 * @param string $tmpl template to use
+     * Class constructor - initializes basic variables.
+     * @param string $tmpl template to use
      * @param string $dbname database to use
      * @param array $props custom properties to pass to class
-	 */
+     */
     public function __construct($tmpl, $dbname = '',$props = ''){
         $this->tmpl = filter_var($tmpl,FILTER_SANITIZE_STRING);
 
