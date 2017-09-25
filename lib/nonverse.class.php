@@ -244,8 +244,8 @@ class Nonverse {
     }
 
     /**
-	 * Fetches template content
-	 */
+     * Fetches template content
+     */
     protected function openTemplate(){
         $fp = fopen("tmpl/".$this->tmpl.".tmpl",'r');
         $this->tpldata = fread($fp,filesize("tmpl/$this->tmpl.tmpl"));
@@ -253,10 +253,10 @@ class Nonverse {
     }
 
     /**
-	 * Spell checks parsed template content
+     * Spell checks parsed template content
      * @param string $string content to spell check
      * @return string spell-checked word
-	 */
+     */
     protected function spellCheck($string){
 
         if ( function_exists('enchant_broker_init') && (@$this->config['spellcheck_engine'] == 'enchant' || empty($this->config['spellcheck_engine'])) ){
@@ -293,12 +293,12 @@ class Nonverse {
     }
 
     /**
-	 * Find best option from suggested spelling replacements
-	 * @param string $misspelling misspelled word
+     * Find best option from suggested spelling replacements
+     * @param string $misspelling misspelled word
      * @param array $suggestions word replacement suggestions
      * @param array $props custom properties to pass to class
      * @return string best suggestion
-	 */
+     */
     protected function getBestSuggestion($misspelling, $suggestions){
         $best_suggestion = null;
 
