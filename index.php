@@ -7,6 +7,7 @@ if ( !isset($_REQUEST['tmpl']) || empty($_REQUEST['tmpl']) ){
     $tmpl = $_REQUEST['tmpl'];
 }
 $poem = new Nonverse($tmpl);
+//print_r($poem->tpldata);
 //$config = array('use_spellcheck' => false);
 //$poem->setConfig($config);
 $poem->process();
